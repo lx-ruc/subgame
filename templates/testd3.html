@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+</head>
+
+<body>
+    <script>
+    var liContainer = d3.select("body").append("div")
+    liContainer.selectAll("li").data([1,2,3]).enter().append("li").text(d=>d)
+
+    // 创建路径生成器对象
+var pathGenerator = d3.path();
+
+// 移动到起始点
+pathGenerator.moveTo(250, 50);
+
+// 画一条直线
+pathGenerator.lineTo(150, 150);
+
+// 画一条弧线
+pathGenerator.arc(100, 100, 50, 0, Math.PI / 2, false);
+
+// 获取生成的路径字符串
+var pathString = pathGenerator.toString();
+
+// 创建 SVG 元素并添加路径
+var svg = d3.select("body").append("svg").attr("width", 200).attr("height", 200);
+svg.append("path")
+    .attr("d", pathString)
+    .attr("stroke", "black")
+    .attr("fill", "none");
+
+    </script>
+</body>
+</html>

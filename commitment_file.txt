@@ -1,0 +1,7 @@
+player1;player2;;1Alice_pay_50_to_Bob;1;[3,1] [-2,3] [-4,-6];
+player2;player1;1:sat;2Bob_send_book_to_Alice;2;[3,1] [5,-3] [-4,-6];
+player1;player2;2:sat;3Bob_send_book_to_Alice;5;[3,1] [-5,3] [-4,-6];
+player2;player1;3:sat;4Bob_send_book_to_Alice;3;[3,1] [5,-3] [-4,-6];
+player1;player2;4:sat;5Bob_send_book_to_Alice;4;[3,1] [-5,3] [-4,-6];
+player1;player2;3:vio;6Bob_send_book_to_Alice;6;[3,1] [5,-3] [-4,-6];
+player1;player2;4:vio;7Bob_send_book_to_Alice;7;[3,1] [-5,3] [-4,-6];

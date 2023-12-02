@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D3.js Bar Chart Example</title>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+</head>
+<body>
+
+<script>
+    // 创建一个SVG元素并设置宽度和高度
+    var svg = d3.select("body")
+        .append("svg")
+        .attr("width", 400)
+        .attr("height", 120);
+
+    // 创建一个g元素并设置transform属性
+    var g = svg.append("g")
+        .attr("transform", "translate(10,10)");
+
+    // 数据集
+    var dataset = [3, 6, 9, 12];
+    var rectHeight = 30;
+
+    // 创建矩形元素
+    var rectangles = g.selectAll("rect")
+        .data(dataset)
+        .enter()
+        .append("rect")
+        .attr("x", 20)
+        .attr("y", function(d, i) {
+            return i * rectHeight;
+        })
+        .attr("width", function(d) {
+            return d * 10;
+        })
+        .attr("height", rectHeight - 5)
+        .attr("fill", "blue");
+</script>
+
+</body>
+</html>
