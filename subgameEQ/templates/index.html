@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tree Structure</title>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        #header {
+            padding: 1px;
+            background-color: #333;
+            color: white;
+            text-align: center;
+        }
+
+        #container {
+            display: flex;
+            height: 100vh;
+        }
+
+        #sidebar-left{
+            width: 25%;
+            overflow-y: auto;
+            background-color: #f2f2f2;
+            padding: 20px;
+        }
+
+
+        #tree-container {
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        
+        #Computation-results p,
+        #Computation-results ul {
+            font-size: 18px; /* Adjust this value to your preferred font size */
+        }
+
+        .options {
+            padding: 10px;
+            background-color: #333;
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .node g {
+            fill: #fff;
+            stroke: steelblue;
+            stroke-width: 1.5px;
+        }
+
+        .node text {
+            font: 14px sans-serif;
+            pointer-events: none;
+        }
+
+        .link {
+            fill: none;
+            stroke: #ccc;
+            stroke-width: 6px;
+        }
+        
+        .link.highlighted path {
+            stroke: #00F5FF; /* Change the stroke color for highlighted edges */
+            stroke-width: 8px; /* Adjust the stroke width for highlighted edges */
+        }
+        
+
+        .box-and-text {
+            transform: translate(100, 100);
+        }
+
+        .footer {
+            background-color: #333;
+            color: #fff;
+            padding: 10px;
+            text-align: center;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- import Vue before Element -->
+    <script src="https://unpkg.com/vue@2/dist/vue.js"></script>
+    <!-- import JavaScript -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <div id="header">
+        <h1>Tree Structure</h1>
+    </div>
+
+        
+    <div id="tree-container">
+        <svg id="tree-svg"></svg>
+    </div>
+
+    <div class="footer">
+        <!-- Your footer content goes here -->
+        <div id="tree-properties">
+            <!-- Tree properties will be appended here -->
+        </div>
+       
+    </div>
+
+
+    </div>
+    <script>
+        // Fetch data from the server and use D3.js to render the tree
+        fetch("/get_tree_data")
+            .then(response => response.json())
+            .then(treeData => {
+                console.log('Received tree data:', treeData);
+                var tree_height = treeData.tree_data.depth
+                var tree_width = treeData.tree_data.width
+                var tree_total_node_num = treeData.tree_data.total_node_num
+                
+                // Adjust tree and SVG container size
+                var margin = { top: 0, right: 1000, bottom: 100, left: 100 };
+                var width = window.innerWidth - margin.left - margin.right;
+                var height = window.innerHeight - margin.top - margin.bottom;
+                d3.select("#tree-properties")
+                .append("p")
+                .text("Tree Height: " + tree_height + "  Tree width: " + tree_width + "  Total Node Count : " + tree_total_node_num);
+
+
+                var svg = d3.select("#tree-svg")
+                    .attr("width", width + margin.left + margin.right)
+                    .attr("height", height + margin.top + margin.bottom)
+                    .call(d3.zoom().on("zoom", function () {
+                        svg.attr("transform", d3.event.transform);
+                    }))
+                    .append("g")
+                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+                svg.call(d3.zoom().transform, d3.zoomIdentity.translate(margin.left, margin.top).scale(1));
+
+                var root = d3.hierarchy(treeData.tree_data);
+                // Calculate the maximum text width and height for all nodes
+                var maxTextWidth = 0;
+                var maxTextHeight = 0;
+                var commitments_num = JSON.parse(treeData.tree_data.name).length;
+                var col = Math.ceil(commitments_num/10)
+                var row = 10
+                if (commitments_num < 10){
+                    row = commitments_num
+                }
+                root.each(function(d) {
+                    var data = d.data.name;
+                    var textDimensions = getTextDimensions(data);
+                    maxTextWidth = Math.max(maxTextWidth, textDimensions.width);
+                    maxTextHeight = Math.max(maxTextHeight, textDimensions.height);
+                });
+                var node_width = col * maxTextWidth
+                var node_height = 20 * maxTextHeight
+                var interval_num = tree_width + 1
+                var interval_size = 50
+                var col_interval_size = col ** 2 * 100
+                var redundancy = 500
+                var tree_size = [tree_height * node_height + col_interval_size * (tree_height + 1) + redundancy , tree_width * node_width + interval_num * interval_size + redundancy]
+                var tree = d3.tree().size(tree_size);
+                tree(root);
+                // var treeHeight = tree_width * maxTextHeight * 20; // 50 是每个节点的高度
+                // var treeWidth = tree_height * maxTextWidth * 200; // 100 是每个节点的宽度
+                
+
+                // Update tree with adjusted separation and node positions
+                tree.separation(function(a, b) {
+                    return a.parent == b.parent ? maxTextWidth * 100 : maxTextWidth * 25;
+                });
+
+                var diagonal = d3.linkHorizontal() // Use linkVertical for vertical orientation
+                    .x(function(d) { return d.x; })
+                    .y(function(d) { return d.y; });
+
+            // Create a group for links
+            var linkGroup = svg.append("g").attr("class", "links");
+
+            // Create a group for text
+            var textGroup = svg.append("g").attr("class", "texts");
+
+            // Add links to the link group
+            var link = linkGroup.selectAll(".link")
+                .data(root.links())
+                .enter().append("g")
+                .attr("class", "link");
+
+            link.append("path")
+                .attr("class", "link")
+                .attr("d", function(d) {
+                    return diagonal({
+                        source: {x: d.source.x - maxTextWidth / 2, y: d.source.y + maxTextWidth * 3},
+                        target: {x: d.target.x - maxTextWidth / 2, y: d.target.y - maxTextWidth }
+                    });
+                });
+
+                link.on("click", function(d) {
+                    // Handle link click
+                    updateSidebar(d.target.data);
+                });
+
+                
+                function updateSidebar(targetData) {
+                    
+                    // Update the content of the sidebar based on the target node's data
+                    events_list = []
+                    target_name = JSON.parse(targetData.name)
+                    target_data = targetData.data
+                    for(i=0;i<target_data.length;i++){
+
+                        if(target_name[i] === 2){
+                            events_list.push((i+1) + "_ACT:" +  target_data[i].result )
+                        }
+
+                        if(target_name[i] === 3){
+                            events_list.push((i+1)+ "_SAT:" +target_data[i].result)
+                        }
+                        if(target_name[i] === 4){
+                            events_list.push((i+1)+ "_EXP:" +target_data[i].result)
+                        }
+
+                        if(target_name[i] === 5){
+                            events_list.push((i+1)+ "_VIO:" +target_data[i].result)
+                        }
+                    }
+                    
+                    
+                    var sidebarContent = "<h2>Current State:</h2><ul style='font-size: 18px;'>";
+                        for (let event of events_list) {
+                            sidebarContent += `<li>${event}</li>`;
+                        }
+                        sidebarContent += "</ul>";
+                
+                    // Update the content of the current-status-and-events div
+                    document.getElementById("current-status-and-events").innerHTML = sidebarContent;
+                }
+                
+
+                    // Add a variable to keep track of the currently highlighted edge
+                    var highlightedEdge = null;
+
+                    // Function to handle edge click
+                    function handleEdgeClick(d) {
+                        // Remove highlighting from the previously highlighted edge, if any
+                        if (highlightedEdge) {
+                            d3.select(highlightedEdge).classed("highlighted", false);
+                        }
+
+                        // Highlight the clicked edge
+                        d3.select(this).classed("highlighted", true);
+
+                        // Update the highlightedEdge variable
+                        highlightedEdge = this;
+
+                        // Update the sidebar with information about the target node
+                        updateSidebar(d.target.data);
+                    }
+
+                    // Function to handle body click
+                    function handleBodyClick() {
+                        // Remove highlighting from the currently highlighted edge, if any
+                        if (highlightedEdge) {
+                            d3.select(highlightedEdge).classed("highlighted", false);
+                            highlightedEdge = null;
+                        }
+
+                        // Clear the sidebar content
+                        document.getElementById("current-status-and-events").innerHTML = "<h2>Click edge to get details:</h2>";
+                    }
+
+                    // Add click event listener to each link
+                    link.on("click", function(d) {
+                        // Call handleEdgeClick
+                        handleEdgeClick.call(this, d);
+
+                        // Stop the propagation of the click event
+                        d3.event.stopPropagation();
+                    });
+
+                    // Add click event listener to the body to clear highlighting
+                    d3.select("body").on("click", handleBodyClick);
+
+                    
+
+            // Add text to the text group
+            var linkText = textGroup.selectAll(".link-text")
+                .data(root.links())
+                .enter().append("text")
+                .attr("class", "link-text")
+                .attr("transform", function(d) {
+                    var x = (d.source.x + d.target.x) / 2 + 5;
+                    var y = (d.source.y + d.target.y) / 2;
+            
+                    // Calculate the angle of the link
+                    var angle = Math.atan2(d.target.y - d.source.y, d.target.x - d.source.x);
+            
+                    // Move the text slightly above the link based on the angle
+                    var yOffset = 0; // Adjust this value based on your preference
+                    y += yOffset * Math.sin(angle) -15;
+            
+                    return "translate(" + y + "," + x + ")";
+                })
+                .text(function(d) {
+                    // Display the text content from the parent node's data array
+                    source_data  = d.source.data
+                    target_data  = d.target.data
+                    source_status = JSON.parse(source_data.name)
+                    target_status = JSON.parse(target_data.name)
+                    source_status_index = 0
+                    source_event_index = 0
+                    target_status_index = 0
+                    target_event_index = 0
+                    source_status.forEach((obj,i)=>{
+                        if(obj === 2){
+                            source_status_index = obj
+                            source_event_index = i
+                            return
+                        }
+                        })
+                        target_status.forEach((obj,i)=>{
+                        if(obj === 2){
+                            target_status_index = obj
+                            target_event_index = i
+                            return
+                        }
+                        })
+                    data_list = []
+                    for(i=0;i<d.source.data.data.length;i++){
+                    }
+                })
+                .style("font-size", "20px")
+                .style("fill", "black")
+                .style("text-anchor", "middle")
+                .style("font-weight", "bold");
+                
+                
+
+                var nodes = svg.selectAll(".node")
+                    .data(root.descendants())
+                    .enter().append("g")
+                    .attr("class", "node")
+                    .attr("transform", function(d) {
+                        return "translate(" + (d.x - maxTextWidth / 2) + "," + d.y + ")"; // Adjust x position
+                    });
+
+                    
+                // Append a rectangle for each node with border and no fill
+                nodes.each(function(d) {
+                    var isfinal = true;
+                    var data = d.data.name;
+                    data = JSON.parse(data);
+                    var payoff_data = d.data.data;
+                    var playerValue = d.data.player;
+                    console.log(payoff_data)
+                    var itemsPerRow = 10; // 每行显示的小方块数量
+                    var yOffset = -maxTextHeight * 2;
+                    var xOffset = d.children ? 0 : -maxTextWidth / 2;
+
+                    for (var i = 0; i < payoff_data.length; i++) {
+                        isfinal = isfinal && payoff_data[i].finalpayoff !== null;
+
+                        // Add a line break if it's the nth item (index n-1)
+                        if (i % itemsPerRow === 0 && i !== 0) {
+                            xOffset += maxTextHeight + 5; // Increase the yOffset for the new line
+                        }
+
+                        d3.select(this).append("rect")
+                            .style("stroke", function() {
+                                if (isfinal) {
+                                    return "black"
+                                }
+                                // 根据当前节点的 player 属性设置边框颜色
+                                switch (playerValue) {
+                                    case "player1":
+                                        return "#EB5C58"; // 设置 player1 的边框颜色为红色
+                                    case "player2":
+                                        return "#76AFEB"; // 设置 player2 的边框颜色为蓝色
+                                    // 可以根据需要添加更多的玩家情况
+                                    default:
+                                        return "black"; // 默认情况下设置为黑色
+                                }
+                            })
+                            .style("stroke-width", "3px")
+                            .attr("width", maxTextWidth * 5)
+                            .attr("height", maxTextHeight)
+                            .attr("x", xOffset - maxTextWidth)
+                            .attr("y", yOffset - 10 + (i % itemsPerRow) * maxTextHeight)
+                            .attr("class", "box-and-text")
+                            .style("fill", function() {
+                                // ... (其他设置保持不变)
+                                switch (data[i]) {
+                                    case 1:
+                                        return "#ffffff"; // 1 为白色
+                                    case 2:
+                                        return "#00deff"; // 2 为蓝色
+                                    case 3:
+                                        return "#78f82f"; // 3 为绿色
+                                    case 4:
+                                        return "#ffef00"; // 4 为黄色
+                                    case 5:
+                                        return "#fd445f"; // 5 为红色
+                                    default:
+                                        return "#000000"; // 默认为黑色
+                                }
+                            });
+                
+                        
+                
+                            d3.select(this).append("text")
+                            .attr("x", xOffset + maxTextWidth * 1.5)
+                            .attr("y", yOffset - 10 + (i % itemsPerRow) * maxTextHeight + maxTextHeight / 2)
+                            .attr("class", "box-and-text")
+                            .attr("dy", "0.35em")
+                            .attr("text-anchor", "middle")
+                            .text(data[i])
+                            .style("fill", "black")
+                            .style("font-size", "24px")
+                            .style("font-weight", "bold");
+                    }
+                
+                    if (isfinal) {
+                        var totalPayoff = calculateTotalPayoff(payoff_data);
+                        d3.select(this).append("text")
+                            .attr("x", xOffset + maxTextWidth)
+                            .attr("y", yOffset + (row+0.5) * maxTextHeight)
+                            .attr("class", "box-and-text")
+                            .attr("dy", "0.35em")
+                            .attr("text-anchor", "middle")
+                            .text(totalPayoff)
+                            .style("fill", "black")
+                            .style("font-size", "24px")
+                            .style("font-weight", "bold");
+                    }
+                });                
+
+
+                function calculateTotalPayoff(payoff_data) {
+                    var player1_payyoff = 0
+                    var player2_payyoff = 0
+                    for (var i = 0;i < payoff_data.length;i++){
+                        
+                        player1_payyoff += payoff_data[i].finalpayoff[0]
+                        player2_payyoff += payoff_data[i].finalpayoff[1]
+                        
+                    }
+                    // 计算总收益，这里假设 finalpayoff 是一个包含两个数字的数组
+                    var totalPayoff = "(" + player1_payyoff + ", " + player2_payyoff + ")";
+                    return totalPayoff;
+                }
+                
+
+                function getTextDimensions(textArray) {
+                    // Create a hidden text element to measure text dimensions
+                    var textElement = d3.select("body").append("svg").append("text")
+                        .selectAll("tspan")
+                        .data(textArray)
+                        .enter().append("tspan")
+                        .text(function(d) { return d; })
+                        .attr("dy", "1em");
+
+                    var bbox = textElement.node().getBBox();
+
+                    // Remove the temporary text element
+                    textElement.remove();
+
+                    return { width: bbox.width, height: bbox.height };
+                }
+                
+            });
+
+            // Vue instance for the commitment form
+            new Vue({
+                el: '.footer',
+                data() {
+                    return {
+                        
+                    };
+                },
+                methods: {
+                    submitForm() {
+                        // Handle form submission
+                        // You can send the form data to the server or perform other actions
+                        // Clear the form after submission
+                        this.clearForm();
+                    },
+                    clearForm() {
+                        // Clear the form fields
+                        this.form = {
+                            commitment_id: '',
+                            initiators: '',
+                            receivers: '',
+                            prerequisites: '',
+                            result: '',
+                            time: '',
+                            payoff: '',
+                        };
+                    },
+                },
+            });
+
+    </script>
+</body>
+</html>

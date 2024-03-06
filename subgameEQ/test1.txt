@@ -1,0 +1,4 @@
+player1;player2;;Bob_send_100_to_Alice,;7 8;[-1,1] [0,0] [0,0]
+player2;player1;1:sat;Alice_send_book_to_Bob,;9 10;[1,-1] [0,0] [0,0]
+player2;player1;2:sat;2sat,;11 12;[1,-1] [0,0] [0,0]
+player2;player1;2:sat;2vio,;12 13;[1,-1] [0,0] [0,0]

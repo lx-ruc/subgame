@@ -1,0 +1,10 @@
+player1;player2;;没有违规,;0 10;0 0
+player1;player2;;拥有所有权,;0 10;0 0
+player1;player2;;无留置权,;0 10;0 0
+player1;player2;;无代理索赔,;0 10;0 0
+player2;player1;;没有违约,;0 10;0 0
+player2;player1;1:sat:&,2:sat:&,3:sat:&,4:sat:&;pay,;11 12;6 4
+player1;player2;5:sat:&;delivery,;12 13;3 10
+player2;player1;6:sat:&,7:sat:&;pay_tex,;14 14;5 2
+player1;player2;1:vio:|,2:vio:|,3:vio:|,4:vio:|,7:vio:|;仲裁(player1),0:sat;15 15;10 10
+player2;player1;5:vio:|,6:vio:|,8:vio:|;仲裁(player2),0:sat;16 16;10 10

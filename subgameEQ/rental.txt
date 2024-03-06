@@ -1,0 +1,4 @@
+player1;player2;;irrevocable_letter_of_credit,;0 0;[-1,1] [0,0] [0,0]
+player2;player1;1:sat;pay,;1 5;[1,-1] [0,0] [0,0]
+player2;player1;2:sat;keep,;6 30;[1,-1] [0,0] [0,0]
+player1;player2;3:sat;continue,;31 37;[-1,1] [0,0] [0,0]

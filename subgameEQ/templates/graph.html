@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>graph</title>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        #header {
+            padding: 1px;
+            background-color: #333;
+            color: white;
+            text-align: center;
+        }
+
+        #container {
+            display: flex;
+            height: 100%;
+        }
+
+        #sidebar-left{
+            width: 25%;
+            overflow-y: auto;
+            background-color: #f2f2f2;
+            padding: 20px;
+        }
+
+        #graph_container {
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        #addCommitmentButton {
+            position: relative;
+            top: 950px;  
+            left: 150px;
+            background-color: #333;
+        }
+    </style>
+    <!-- 引入 Vue.js -->
+    <script src="https://unpkg.com/vue@2/dist/vue.js"></script>
+
+    <!-- 引入 Element UI 的样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+
+    <!-- 引入 Element UI 的脚本 -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+
+</head>
+
+<body>
+    <!-- import Vue before Element -->
+    <script src="https://unpkg.com/vue@2/dist/vue.js"></script>
+    <!-- import JavaScript -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <div id="header">
+        <h1>submit commitments and get dependent graph</h1>
+    </div>
+
+    <div id="container">
+        <div id="sidebar-left">
+            <el-button id="addCommitmentButton" @click="showDialog" type="primary" style="margin-top: auto;">Add_commitment</el-button>
+            
+            <el-dialog :visible.sync="dialogVisible" title="Add Commitment">
+                <!-- 表单内容 -->
+                <el-form :model="formData" label-width="80px">
+                    <el-form-item label="Initiator">
+                        <el-input v-model="formData.initiator"></el-input>
+                    </el-form-item>
+                    <el-form-item label="Receiver">
+                        <el-input v-model="formData.receiver"></el-input>
+                    </el-form-item>
+                    <el-form-item label="Prerequisite">
+                        <el-input v-model="formData.prerequisite"></el-input>
+                    </el-form-item>
+                    <el-form-item label="Result">
+                        <el-input v-model="formData.result"></el-input>
+                    </el-form-item>
+                    <el-form-item label="EXP_time">
+                        <el-input v-model="formData.EXP_time"></el-input>
+                    </el-form-item>
+                    <el-form-item label="VIO_time">
+                        <el-input v-model="formData.VIO_time"></el-input>
+                    </el-form-item>
+                    <el-form-item label="Payoff">
+                        <el-input v-model="formData.payoff"></el-input>
+                    </el-form-item>
+                </el-form>
+        
+                <!-- 确定和取消按钮 -->
+                <div slot="footer" class="dialog-footer">
+                    <el-button @click="dialogVisible = false">Cancel</el-button>
+                    <el-button type="primary" @click="addCommitment" style="background-color: #333;">OK</el-button>
+                </div>
+            </el-dialog>
+        </div>
+
+       
+
+            <div id = "graph_container" >
+                <svg id="dependent_graph"></svg>
+            </div>
+
+    </div>
+
+    <script>
+        fetch("/get_graph_data")
+        .then(response => response.json())
+        .then(graph_data => {
+            console.log(graph_data.g_data);
+            
+            drawDAG(JSON.parse(graph_data.g_data));
+            
+        });
+
+        function drawDAG(graphData) {
+            var container = document.getElementById("graph_container");
+            var width = container.clientWidth;
+            var height = container.clientHeight;
+        
+            var svg = d3.select("#dependent_graph")
+                        .attr("width", width)
+                        .attr("height", height);
+        
+            // 构建节点和边数组
+            var nodes = Object.keys(graphData).map(id => ({ id: id }));
+            var links = [];
+        
+            // 过滤掉空列表的节点
+            nodes = nodes.filter(node => graphData[node.id].length > 0);
+        
+            for (var source in graphData) {
+                if (graphData[source].length > 0) {
+                    for (var target of graphData[source]) {
+                        links.push({ source: source, target: target[0], property: target[1] });
+                    }
+                }
+            }
+        
+            // 绘制链接
+            var link = svg.selectAll(".link")
+                .data(links)
+                .enter().append("line")
+                .attr("class", "link")
+                .style("stroke", "#ccc");
+        
+            // 绘制节点
+            var node = svg.selectAll(".node")
+            .data(nodes)
+            .enter().append("circle")
+            .attr("class", "node")
+            .attr("r", 20)
+            .style("fill", "#ccc")  // 设置节点的填充色
+            .style("stroke", "#333");  // 设置节点的边框颜色
+        
+            // 添加节点标签
+            svg.selectAll("text")
+                .data(nodes)
+                .enter().append("text")
+                .text(d => d.id)
+                .attr("dy", ".35em")  // 垂直方向上微调文本位置
+                .style("text-anchor", "middle")  // 文本居中对齐
+                .style("fill", "#333");  // 设置文本颜色
+        
+            // 设置节点和链接位置
+            link
+                .attr("x1", d => getNodeX(d.source))
+                .attr("y1", d => getNodeY(d.source))
+                .attr("x2", d => getNodeX(d.target))
+                .attr("y2", d => getNodeY(d.target));
+        
+            node
+                .attr("cx", d => getNodeX(d.id))
+                .attr("cy", d => getNodeY(d.id));
+        
+            // 设置节点标签位置
+            svg.selectAll("text")
+                .attr("x", d => getNodeX(d.id))
+                .attr("y", d => getNodeY(d.id));
+        
+            function getNodeX(nodeId) {
+                return width / 2;  // 在水平方向上居中放置节点
+            }
+        
+            function getNodeY(nodeId) {
+                return nodeId * 50;  // 垂直方向上根据节点的编号放置节点
+            }
+        }
+        
+        new Vue({
+            el: '#sidebar-left',
+            data: {
+                dialogVisible: false,
+                formData: {
+                    initiator: '',
+                    receiver: '',
+                    prerequisite: '',
+                    result: '',
+                    EXP_time: '',
+                    VIO_time: '',
+                    payoff: ''
+                }
+            },
+            methods: {
+                showDialog() {
+                    this.dialogVisible = true;
+                },
+                addCommitment() {
+                    // 处理提交表单的逻辑，可以将 formData 发送到服务器或进行其他操作
+                    console.log('Commitment added:', this.formData);
+        
+                    // 清空表单
+                    this.formData = {
+                        initiator: '',
+                        receiver: '',
+                        prerequisite: '',
+                        result: '',
+                        EXP_time: '',
+                        VIO_time: '',
+                        payoff: ''
+                    };
+        
+                    // 关闭对话框
+                    this.dialogVisible = false;
+                }
+            }
+        });
+        
+    </script>
+</body>
+</html>

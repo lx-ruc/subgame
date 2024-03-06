@@ -1,0 +1,3 @@
+player1;player2;;irrevocable_letter_of_credit,;1 30;[-1,1] [0,0] [0,0]
+player2;player1;1:sat;send_goods_and_issue_money_order,;31 32;[1,-1] [0,0] [0,0]
+player1;player2;2:sat;pay_in_time,;33 40;[-1,1] [0,0] [0,0]
